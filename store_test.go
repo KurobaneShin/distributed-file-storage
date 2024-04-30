@@ -36,4 +36,24 @@ func TestStore(t *testing.T) {
 	b, _ := io.ReadAll(r)
 
 	assert.Equal(t, string(b), string(data))
+
+	err = s.Delete(key)
+	assert.Nil(t, err)
+}
+
+func TestStoreDeleteKey(t *testing.T) {
+	opts := StoreOpts{
+		PathTransformFunc: CASPathTransformFunc,
+	}
+
+	s := NewStore(opts)
+	key := "momsspecials"
+	data := ([]byte("some jpeg bytes"))
+
+	err := s.writeStream(key, bytes.NewReader(data))
+	assert.Nil(t, err)
+
+	err = s.Delete(key)
+
+	assert.Nil(t, err)
 }
