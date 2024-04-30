@@ -30,6 +30,10 @@ func TestStore(t *testing.T) {
 		t.Error(err)
 	}
 
+	ok := s.Has(key)
+
+	assert.Equal(t, ok, true)
+
 	r, err := s.Read(key)
 	assert.Nil(t, err)
 
