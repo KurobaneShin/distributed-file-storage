@@ -1,38 +1,35 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"time"
 
 	"github.com/KurobaneShin/distributed-file-storage/p2p"
 )
 
-func OnPeer(p2p.Peer) error {
-	fmt.Println("doing some logic with the peer outside of TCPTransport")
-	return nil
-}
-
 func main() {
-	tcpOpts := p2p.TCPTransportOpts{
+	tcptransformOpts := p2p.TCPTransportOpts{
 		ListenAddr:    ":3000",
 		HandshakeFunc: p2p.NOPHandshakeFunc,
 		Decoder:       p2p.DefaultDecoder{},
-		OnPeer:        OnPeer,
+		// todo on peer func
 	}
 
-	tr := p2p.NewTCPTransport(tcpOpts)
+	tcpTransport := p2p.NewTCPTransport(tcptransformOpts)
+
+	FileServerOpts := FileServerOpts{
+		StorageRoot:       "3000_network",
+		PathTransformFunc: CASPathTransformFunc,
+		Transport:         tcpTransport,
+	}
+	s := NewFileServer(FileServerOpts)
 
 	go func() {
-		for {
-			msg := <-tr.Consume()
-
-			fmt.Println("message:", msg)
-		}
+		time.Sleep(time.Second * 3)
+		s.Stop()
 	}()
 
-	if err := tr.ListenAndAccept(); err != nil {
+	if err := s.Start(); err != nil {
 		log.Fatal(err)
 	}
-
-	select {}
 }
