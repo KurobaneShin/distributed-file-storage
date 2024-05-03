@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/KurobaneShin/distributed-file-storage/p2p"
 )
@@ -44,8 +43,11 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 }
 
 type Message struct {
-	From    string
 	Payload any
+}
+
+type MessageStoreFile struct {
+	Key string
 }
 
 func (s *FileServer) broadcast(msg *Message) error {
@@ -65,7 +67,9 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 	buf := new(bytes.Buffer)
 
 	msg := Message{
-		Payload: []byte("storagekey"),
+		Payload: MessageStoreFile{
+			Key: key,
+		},
 	}
 
 	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
@@ -78,15 +82,15 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 		}
 	}
 
-	time.Sleep(3 * time.Second)
-
-	payload := []byte("this is a large file")
-
-	for _, peer := range s.peers {
-		if err := peer.Send(payload); err != nil {
-			return err
-		}
-	}
+	// time.Sleep(3 * time.Second)
+	//
+	// payload := []byte("this is a large file")
+	//
+	// for _, peer := range s.peers {
+	// 	if err := peer.Send(payload); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	return nil
 
@@ -136,7 +140,7 @@ func (s *FileServer) loop() {
 				log.Println("decoding error:", err)
 			}
 
-			println("recv: ", string(msg.Payload.([]byte)))
+			fmt.Printf("payload: %+v\n", msg.Payload)
 
 			peer, ok := s.peers[rpc.From]
 
@@ -201,4 +205,8 @@ func (s *FileServer) Start() error {
 	s.loop()
 
 	return nil
+}
+
+func init() {
+	gob.Register(MessageStoreFile{})
 }
