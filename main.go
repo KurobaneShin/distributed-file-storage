@@ -36,7 +36,7 @@ func main() {
 	go func() {
 		log.Fatal(s1.Start())
 	}()
-	time.Sleep(1 * time.Second)
+	// time.Sleep(1 * time.Second)
 
 	go s2.Start()
 
@@ -44,4 +44,6 @@ func main() {
 
 	data := bytes.NewReader([]byte("my big data file here!"))
 	s2.StoreData("key", data)
+
+	select {}
 }
