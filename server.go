@@ -52,30 +52,30 @@ type MessageStoreFile struct {
 	Size int64
 }
 
-func (s *FileServer) stream(msg *Message) error {
-	peers := []io.Writer{}
-
-	for _, peer := range s.peers {
-		peers = append(peers, peer)
-	}
-
-	mw := io.MultiWriter(peers...)
-	return gob.NewEncoder(mw).Encode(msg)
+type MessageGetFile struct {
+	Key string
 }
 
-func (s *FileServer) broadcast(msg *Message) error {
-	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
-		return err
+func (s *FileServer) Get(key string) (io.Reader, error) {
+	if s.store.Has(key) {
+		return s.store.Read(key)
 	}
 
-	for _, peer := range s.peers {
-		if err := peer.Send(buf.Bytes()); err != nil {
-			return err
-		}
+	fmt.Printf("dont have file (%s) locally, fetching from network...\n", key)
+
+	msg := Message{
+		Payload: MessageGetFile{
+			Key: key,
+		},
 	}
 
-	return nil
+	if err := s.broadcast(&msg); err != nil {
+		return nil, err
+	}
+	// TODO fix this
+	select {}
+
+	return nil, nil
 }
 
 func (s *FileServer) Store(key string, r io.Reader) error {
@@ -154,9 +154,17 @@ func (s *FileServer) loop() {
 func (s *FileServer) handleMessage(from string, msg *Message) error {
 	switch v := msg.Payload.(type) {
 	case MessageStoreFile:
-		s.handleMessageStoreFile(from, v)
+		return s.handleMessageStoreFile(from, v)
+
+	case MessageGetFile:
+		return s.handleMessageGetFile(from, v)
 	}
 
+	return nil
+}
+
+func (s *FileServer) handleMessageGetFile(from string, msg MessageGetFile) error {
+	fmt.Println("need to get a file from disk and send it over the wire")
 	return nil
 }
 
@@ -206,6 +214,33 @@ func (s *FileServer) Start() error {
 	return nil
 }
 
+func (s *FileServer) stream(msg *Message) error {
+	peers := []io.Writer{}
+
+	for _, peer := range s.peers {
+		peers = append(peers, peer)
+	}
+
+	mw := io.MultiWriter(peers...)
+	return gob.NewEncoder(mw).Encode(msg)
+}
+
+func (s *FileServer) broadcast(msg *Message) error {
+	buf := new(bytes.Buffer)
+	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
+		return err
+	}
+
+	for _, peer := range s.peers {
+		if err := peer.Send(buf.Bytes()); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func init() {
 	gob.Register(MessageStoreFile{})
+	gob.Register(MessageGetFile{})
 }
