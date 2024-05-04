@@ -52,7 +52,7 @@ type MessageStoreFile struct {
 	Size int64
 }
 
-func (s *FileServer) broadcast(msg *Message) error {
+func (s *FileServer) stream(msg *Message) error {
 	peers := []io.Writer{}
 
 	for _, peer := range s.peers {
@@ -63,7 +63,22 @@ func (s *FileServer) broadcast(msg *Message) error {
 	return gob.NewEncoder(mw).Encode(msg)
 }
 
-func (s *FileServer) StoreData(key string, r io.Reader) error {
+func (s *FileServer) broadcast(msg *Message) error {
+	buf := new(bytes.Buffer)
+	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
+		return err
+	}
+
+	for _, peer := range s.peers {
+		if err := peer.Send(buf.Bytes()); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *FileServer) Store(key string, r io.Reader) error {
 	fileBuffer := new(bytes.Buffer)
 
 	tee := io.TeeReader(r, fileBuffer)
@@ -79,20 +94,12 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 			Size: size,
 		},
 	}
-
-	msgBuf := new(bytes.Buffer)
-	if err := gob.NewEncoder(msgBuf).Encode(msg); err != nil {
+	if err := s.broadcast(&msg); err != nil {
 		return err
 	}
-
-	for _, peer := range s.peers {
-		if err := peer.Send(msgBuf.Bytes()); err != nil {
-			return err
-		}
-	}
-
 	time.Sleep(3 * time.Second)
 
+	// TODO ise a MultiWriter here
 	for _, peer := range s.peers {
 		n, err := io.Copy(peer, fileBuffer)
 		if err != nil {
