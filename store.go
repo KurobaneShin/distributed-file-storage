@@ -114,17 +114,7 @@ func (s *Store) Write(key string, r io.Reader) (int64, error) {
 }
 
 func (s *Store) Read(key string) (int64, io.Reader, error) {
-	n, f, err := s.readStream(key)
-	if err != nil {
-		return n, nil, err
-	}
-
-	defer f.Close()
-
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, f)
-
-	return n, buf, err
+	return s.readStream(key)
 }
 
 // FIXME: instead of copying directly to a reader we first copy this into
