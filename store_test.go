@@ -26,14 +26,14 @@ func TestStore(t *testing.T) {
 		key := fmt.Sprintf("key_%d", i)
 		data := ([]byte("some jpeg bytes"))
 
-		if err := s.writeStream(key, bytes.NewReader(data)); err != nil {
+		if _, err := s.writeStream(key, bytes.NewReader(data)); err != nil {
 			t.Error(err)
 		}
 
 		ok := s.Has(key)
 		assert.True(t, ok)
 
-		r, err := s.Read(key)
+		_, r, err := s.Read(key)
 		assert.Nil(t, err)
 
 		b, _ := io.ReadAll(r)
