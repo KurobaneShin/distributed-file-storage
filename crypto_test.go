@@ -3,14 +3,14 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCopyEncryptDecrypt(t *testing.T) {
-	src := bytes.NewReader([]byte("Foo not Bar"))
+	payload := "Foo not Bar"
+	src := bytes.NewReader([]byte(payload))
 	dst := new(bytes.Buffer)
 	key := newEncryptionKey()
 	_, err := copyEncrypt(key, src, dst)
@@ -18,20 +18,11 @@ func TestCopyEncryptDecrypt(t *testing.T) {
 	assert.Nil(t, err)
 
 	fmt.Println(dst.Bytes())
-}
 
-func Test_newEncryptionKey(t *testing.T) {
-	tests := []struct {
-		name string
-		want []byte
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := newEncryptionKey(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("newEncryptionKey() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	out := new(bytes.Buffer)
+	nw, err := copyDecrypt(key, dst, out)
+
+	assert.Nil(t, err)
+
+	assert.Equal(t, 16+len(payload), nw)
 }
