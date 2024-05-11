@@ -68,4 +68,6 @@ func main() {
 	}
 
 	fmt.Println(string(b))
+
+	s3.Delete(key)
 }

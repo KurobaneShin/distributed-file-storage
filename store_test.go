@@ -31,7 +31,7 @@ func TestStore(t *testing.T) {
 			t.Error(err)
 		}
 
-		ok := s.Has(key)
+		ok := s.Has(id, key)
 		assert.True(t, ok)
 
 		_, r, err := s.Read(id, key)
@@ -44,7 +44,7 @@ func TestStore(t *testing.T) {
 		err = s.Delete(id, key)
 		assert.Nil(t, err)
 
-		has := s.Has(key)
+		has := s.Has(id, key)
 		assert.False(t, has)
 	}
 }

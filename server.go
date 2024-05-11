@@ -64,6 +64,34 @@ type MessageGetFile struct {
 	Key string
 }
 
+type MessageDeleteFile struct {
+	ID  string
+	Key string
+}
+
+func (s *FileServer) Delete(key string) error {
+	if s.store.Has(s.ID, key) {
+		fmt.Printf("[%s] deleting file (%s) from local host\n", s.Transport.Addr(), key)
+		s.store.Delete(s.ID, key)
+	}
+
+	fmt.Printf("[%s] deleting (%s) from network...\n", s.Transport.Addr(), key)
+
+	msg := Message{
+		Payload: MessageDeleteFile{
+			Key: hashKey(key),
+			ID:  s.ID,
+		},
+	}
+
+	if err := s.broadcast(&msg); err != nil {
+		return err
+	}
+
+	time.Sleep(time.Millisecond * 500)
+	return nil
+}
+
 func (s *FileServer) Get(key string) (io.Reader, error) {
 	if s.store.Has(s.ID, key) {
 		fmt.Printf("[%s] serving file (%s) from local host\n", s.Transport.Addr(), key)
@@ -193,14 +221,25 @@ func (s *FileServer) handleMessage(from string, msg *Message) error {
 
 	case MessageGetFile:
 		return s.handleMessageGetFile(from, v)
+
+	case MessageDeleteFile:
+		return s.handleMessageDeleteFile(from, v)
 	}
 
 	return nil
 }
 
+func (s *FileServer) handleMessageDeleteFile(from string, msg MessageDeleteFile) error {
+	if !s.store.Has(msg.ID, msg.Key) {
+		return fmt.Errorf("[%s] need to serve file (%s) but it does not exist on disk\n", s.Transport.Addr(), msg.Key)
+	}
+
+	return s.store.Delete(msg.ID, msg.Key)
+}
+
 func (s *FileServer) handleMessageGetFile(from string, msg MessageGetFile) error {
 	if !s.store.Has(msg.ID, msg.Key) {
-		fmt.Printf("[%s] need to serve file (%s) but it does not exist on disk\n", s.Transport.Addr(), msg.Key)
+		return fmt.Errorf("[%s] need to serve file (%s) but it does not exist on disk\n", s.Transport.Addr(), msg.Key)
 	}
 	fileSize, r, err := s.store.Read(msg.ID, msg.Key)
 	if err != nil {
@@ -298,4 +337,5 @@ func (s *FileServer) broadcast(msg *Message) error {
 func init() {
 	gob.Register(MessageStoreFile{})
 	gob.Register(MessageGetFile{})
+	gob.Register(MessageDeleteFile{})
 }
