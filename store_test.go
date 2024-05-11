@@ -20,27 +20,28 @@ func TestPathTransformFnc(t *testing.T) {
 
 func TestStore(t *testing.T) {
 	s := newStore()
+	id := generateID()
 	defer teardown(t, s)
 	for i := 0; i < 50; i++ {
 
 		key := fmt.Sprintf("key_%d", i)
 		data := ([]byte("some jpeg bytes"))
 
-		if _, err := s.writeStream(key, bytes.NewReader(data)); err != nil {
+		if _, err := s.writeStream(id, key, bytes.NewReader(data)); err != nil {
 			t.Error(err)
 		}
 
 		ok := s.Has(key)
 		assert.True(t, ok)
 
-		_, r, err := s.Read(key)
+		_, r, err := s.Read(id, key)
 		assert.Nil(t, err)
 
 		b, _ := io.ReadAll(r)
 
 		assert.Equal(t, string(b), string(data))
 
-		err = s.Delete(key)
+		err = s.Delete(id, key)
 		assert.Nil(t, err)
 
 		has := s.Has(key)
